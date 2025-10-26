@@ -4,6 +4,7 @@ Fully connected feedforward neural network trained with stochastic gradient desc
 
 * `Q` to guess the digit,
 * `C` to clear the screen.
+* `G` to toggle the grid.
 * Left click to draw.
 * right click to erase.
 

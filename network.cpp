@@ -72,7 +72,7 @@ namespace neural
         // Seeding.
         {
             for (int i = 0; i < this->n_weights; ++i) {
-                this->weights[i] = (static_cast<float>(rand()) / RAND_MAX) * 0.1f - 0.1f;
+                this->weights[i] = (static_cast<float>(rand()) / RAND_MAX) * 0.2f - 0.1f;
             }
         }
     }
@@ -104,7 +104,7 @@ namespace neural
             for (int j = 0; j < layer.size; ++j) {
                 Network::Neuron& neuron = layer.neurons[j];
 
-                float total = 0.0f;
+                float total = neuron.bias;
                 for (int k = 0; k < prev.size; ++k) {
                     total += prev.neurons[k].value * neuron.weights[k];
                 }
@@ -125,7 +125,6 @@ namespace neural
         for (int i = 0; i < out.size; ++i) {
             Network::Neuron& neuron = out.neurons[i];
             neuron.error = expected[i] - neuron.value;
-            gradient_descent(out, neuron, rate);
         }
 
         // Backpropagate through all hidden layers.
@@ -142,8 +141,14 @@ namespace neural
                 }
 
                 neuron.error = sum * neuron.value * (1.0f - neuron.value);
+            }
+        }
 
-                gradient_descent(layer, neuron, rate);
+        // Update weights only after all errors are computed so each layer sees the weights from the forward pass.
+        for (int i = 1; i < this->n_layers; ++i) {
+            Network::Layer& layer = this->layers[i];
+            for (int j = 0; j < layer.size; ++j) {
+                gradient_descent(layer, layer.neurons[j], rate);
             }
         }
     }
@@ -156,6 +161,8 @@ namespace neural
             // Stochastic Gradient Descent.
             neuron.weights[i] -= rate * gradient;
         }
+
+        neuron.bias += rate * neuron.error;
     }
 
     int Network::argmax(float* arr, int size) {

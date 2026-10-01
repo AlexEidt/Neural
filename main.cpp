@@ -19,9 +19,9 @@ void draw_brush(int cx, int cy, bool erase) {
     int r2 = BRUSH_RADIUS * BRUSH_RADIUS;
     float r2di = 1.0f / static_cast<float>(r2);
 
-    for (int y = std::max(cy - BRUSH_RADIUS, 0); y < std::min(cy + BRUSH_RADIUS, H * SCALE); ++y) {
+    for (int y = std::max(cy - BRUSH_RADIUS, 0); y < std::min(cy + BRUSH_RADIUS, H); ++y) {
         int dy = y - cy;
-        for (int x = std::max(cx - BRUSH_RADIUS, 0); x < std::min(cx + BRUSH_RADIUS, W * SCALE); ++x) {
+        for (int x = std::max(cx - BRUSH_RADIUS, 0); x < std::min(cx + BRUSH_RADIUS, W); ++x) {
             int dx = x - cx;
             int dxdy2 = dx * dx + dy * dy;
             if (dxdy2 <= r2) {
@@ -82,18 +82,20 @@ int main(int argc, char **argv) {
                     break;
                 case SDL_KEYDOWN:
                     switch (e.key.keysym.sym) {
-                        case SDLK_x:
+                        case SDLK_c:
                             memset(canvas, 0, sizeof(canvas));
                             break;
                         case SDLK_g:
                             grid = !grid;
                             break;
                         case SDLK_q: {
-                            float input[H * W];
+                            float input[H * W * 2];
                             uint8_t* c = &canvas[0][0];
                             for (int i = 0; i < sizeof(canvas); ++i) {
                                 input[i] = static_cast<float>(c[i]) / 255.0f;
                             }
+
+                            neural::process_image(input, input + H * W, H, W);
 
                             float output[10];
                             network.compute(input, output);

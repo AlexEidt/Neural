@@ -20,6 +20,7 @@ namespace neural {
 
             struct Neuron {
                 float* weights {nullptr};
+                float bias {0.0f};
 
                 float value;
                 float error;

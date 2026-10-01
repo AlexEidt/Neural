@@ -10,28 +10,28 @@ namespace neural
             this->n_input = input;
             this->n_output = output;
             this->n_layers = 1 + n_hidden + 1;
-            this->layers = new Network::Layer[this->n_layers];
+            this->layers = new Network::Layer[static_cast<size_t>(this->n_layers)];
         }
 
         {
-            this->n_neurons = input + output;
+            this->n_neurons = static_cast<long>(input + output);
             for (int i = 0; i < n_hidden; ++i) {
-                this->n_neurons += hidden[i];
+                this->n_neurons += static_cast<long>(hidden[i]);
             }
 
-            this->neurons = new Network::Neuron[this->n_neurons];
+            this->neurons = new Network::Neuron[static_cast<size_t>(this->n_neurons)];
         }
 
         {
             // Each neuron has one weight per previous neuron plus a bias (+ 1).
-            this->n_weights = (input + 1) * hidden[0];
+            this->n_weights = static_cast<long>((input + 1) * hidden[0]);
 
             for (int i = 1; i < n_hidden; ++i) {
-                this->n_weights += (hidden[i - 1] + 1) * hidden[i];
+                this->n_weights += static_cast<long>((hidden[i - 1] + 1) * hidden[i]);
             }
 
-            this->n_weights += (hidden[n_hidden - 1] + 1) * output;
-            this->weights = new float[this->n_weights];
+            this->n_weights += static_cast<long>((hidden[n_hidden - 1] + 1) * output);
+            this->weights = new float[static_cast<size_t>(this->n_weights)];
         }
 
         // Connect layers.
@@ -73,8 +73,8 @@ namespace neural
 
         // Seeding.
         {
-            for (int i = 0; i < this->n_weights; ++i) {
-                this->weights[i] = (static_cast<float>(rand()) / RAND_MAX) * 0.2f - 0.1f;
+            for (long i = 0; i < this->n_weights; ++i) {
+                this->weights[i] = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX)) * 0.2f - 0.1f;
             }
         }
     }
@@ -180,7 +180,8 @@ namespace neural
             fwrite(&this->layers[i].size, sizeof(int), 1, file);
         }
 
-        bool ok = fwrite(this->weights, sizeof(float), this->n_weights, file) == this->n_weights;
+        size_t count = static_cast<size_t>(this->n_weights);
+        bool ok = fwrite(this->weights, sizeof(float), count, file) == count;
         fclose(file);
 
         return ok;
@@ -198,7 +199,8 @@ namespace neural
             ok = fread(&size, sizeof(int), 1, file) == 1 && size == this->layers[i].size;
         }
 
-        ok = ok && fread(this->weights, sizeof(float), this->n_weights, file) == this->n_weights && fgetc(file) == EOF;
+        size_t count = static_cast<size_t>(this->n_weights);
+        ok = ok && fread(this->weights, sizeof(float), count, file) == count && fgetc(file) == EOF;
         fclose(file);
 
         return ok;

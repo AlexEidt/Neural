@@ -46,7 +46,7 @@ namespace neural
             n = byte_swap(n);
         }
 
-        if (n != num || network.input() != rows * cols || network.output() != 10)
+        if (n != num || network.input() != static_cast<int>(rows * cols) || network.output() != 10)
             return false;
 
         uint8_t* label = new uint8_t[n];
@@ -57,16 +57,16 @@ namespace neural
         float* fimage = new float[rows * cols * 2];
 
         float output[10];
-        for (int i = 0; i < num; ++i) {
+        for (int i = 0; i < static_cast<int>(num); ++i) {
             std::cout << "\r" << (i + 1) << "/" << num << std::flush;
 
             fread(image, rows * cols, 1, fdata);
 
-            for (int j = 0; j < rows * cols; ++j) {
+            for (int j = 0; j < static_cast<int>(rows * cols); ++j) {
                 fimage[j] = static_cast<float>(image[j]) / 255.0f;
             }
 
-            process_image(fimage, fimage + rows * cols, cols, rows);
+            process_image(fimage, fimage + rows * cols, static_cast<int>(cols), static_cast<int>(rows));
 
             network.compute(fimage, nullptr);
 
@@ -100,8 +100,8 @@ namespace neural
     static float sample(float* image, int w, int h, float x, float y) {
         int left = static_cast<int>(std::floor(x));
         int top = static_cast<int>(std::floor(y));
-        float tx = x - left;
-        float ty = y - top;
+        float tx = x - static_cast<float>(left);
+        float ty = y - static_cast<float>(top);
 
         float top_left = pixel(image, w, h, left, top);
         float top_right = pixel(image, w, h, left + 1, top);
@@ -131,8 +131,8 @@ namespace neural
                 bottom = std::max(bottom, y);
 
                 mass += value;
-                center_x += value * x;
-                center_y += value * y;
+                center_x += value * static_cast<float>(x);
+                center_y += value * static_cast<float>(y);
             }
         }
 
@@ -146,10 +146,12 @@ namespace neural
         float scale = static_cast<float>(std::max(right - left, bottom - top) + 1) / BOX;
 
         // Resample around the center of mass so it lands in the middle of the image.
+        float middle_x = static_cast<float>(w) / 2.0f;
+        float middle_y = static_cast<float>(h) / 2.0f;
         for (int y = 0; y < h; ++y) {
             for (int x = 0; x < w; ++x) {
-                float source_x = center_x + (x - w / 2.0f) * scale;
-                float source_y = center_y + (y - h / 2.0f) * scale;
+                float source_x = center_x + (static_cast<float>(x) - middle_x) * scale;
+                float source_y = center_y + (static_cast<float>(y) - middle_y) * scale;
                 image[y * w + x] = sample(temp, w, h, source_x, source_y);
             }
         }

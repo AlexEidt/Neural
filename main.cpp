@@ -94,17 +94,17 @@ int main(int argc, char **argv) {
                         case SDLK_RETURN: {
                             float input[H * W];
                             uint8_t* c = &canvas[0][0];
-                            for (int i = 0; i < sizeof(canvas); ++i) {
+                            for (int i = 0; i < static_cast<int>(sizeof(canvas)); ++i) {
                                 input[i] = static_cast<float>(c[i]) / 255.0f;
                             }
 
                             float buffer[H * W];
-                            neural::process_image(input, buffer, H, W);
+                            neural::process_image(input, buffer, W, H);
 
-                            float digits[10];
-                            network.compute(input, digits);
+                            float output[10];
+                            network.compute(input, output);
 
-                            int digit = neural::Network::argmax(digits, 10);
+                            int digit = neural::Network::argmax(output, 10);
                             std::cout << digit << std::endl;
                             break;
                         }

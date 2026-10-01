@@ -1,6 +1,7 @@
 #include "network.hpp"
 #include <cmath>
 #include <cfloat>
+#include <cstdio>
 
 namespace neural
 {
@@ -22,13 +23,14 @@ namespace neural
         }
 
         {
-            this->n_weights = input * hidden[0];
+            // Each neuron has one weight per previous neuron plus a bias (+ 1).
+            this->n_weights = (input + 1) * hidden[0];
 
             for (int i = 1; i < n_hidden; ++i) {
-                this->n_weights += hidden[i - 1] * hidden[i];
+                this->n_weights += (hidden[i - 1] + 1) * hidden[i];
             }
 
-            this->n_weights += hidden[n_hidden - 1] * output;
+            this->n_weights += (hidden[n_hidden - 1] + 1) * output;
             this->weights = new float[this->n_weights];
         }
 
@@ -64,7 +66,7 @@ namespace neural
                     Network::Neuron& neuron = current.neurons[j];
 
                     neuron.weights = fptr;
-                    fptr += prev.size;
+                    fptr += prev.size + 1; // Bias is stored after the weights.
                 }
             }
         }
@@ -104,7 +106,8 @@ namespace neural
             for (int j = 0; j < layer.size; ++j) {
                 Network::Neuron& neuron = layer.neurons[j];
 
-                float total = neuron.bias;
+                float bias = neuron.weights[prev.size];
+                float total = bias;
                 for (int k = 0; k < prev.size; ++k) {
                     total += prev.neurons[k].value * neuron.weights[k];
                 }
@@ -162,7 +165,43 @@ namespace neural
             neuron.weights[i] -= rate * gradient;
         }
 
-        neuron.bias += rate * neuron.error;
+        float& bias = neuron.weights[layer.prev->size];
+        bias += rate * neuron.error;
+    }
+
+    bool Network::save(const char* path) {
+        FILE* file = fopen(path, "wb");
+        if (!file)
+            return false;
+
+        // Layout header: layer count, then each layer's size.
+        fwrite(&this->n_layers, sizeof(int), 1, file);
+        for (int i = 0; i < this->n_layers; ++i) {
+            fwrite(&this->layers[i].size, sizeof(int), 1, file);
+        }
+
+        bool ok = fwrite(this->weights, sizeof(float), this->n_weights, file) == this->n_weights;
+        fclose(file);
+
+        return ok;
+    }
+
+    bool Network::load(const char* path) {
+        FILE* file = fopen(path, "rb");
+        if (!file)
+            return false;
+
+        // The layout header must match this network's, then exactly n_weights floats follow.
+        int size = 0;
+        bool ok = fread(&size, sizeof(int), 1, file) == 1 && size == this->n_layers;
+        for (int i = 0; ok && i < this->n_layers; ++i) {
+            ok = fread(&size, sizeof(int), 1, file) == 1 && size == this->layers[i].size;
+        }
+
+        ok = ok && fread(this->weights, sizeof(float), this->n_weights, file) == this->n_weights && fgetc(file) == EOF;
+        fclose(file);
+
+        return ok;
     }
 
     int Network::argmax(float* arr, int size) {

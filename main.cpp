@@ -59,7 +59,10 @@ int main(int argc, char **argv) {
 
     int hidden[1] = {256};
     neural::Network network(W * H, hidden, sizeof(hidden) / sizeof(hidden[0]), 10);
-    neural::train(network, "mnist/train-images.idx3-ubyte", "mnist/train-labels.idx1-ubyte", 0.05f);
+    if (!network.load("network.bin")) {
+        neural::train(network, "mnist/train-images.idx3-ubyte", "mnist/train-labels.idx1-ubyte", 0.05f);
+        network.save("network.bin");
+    }
 
     bool running = true;
     bool mouse_down = false;
@@ -82,25 +85,26 @@ int main(int argc, char **argv) {
                     break;
                 case SDL_KEYDOWN:
                     switch (e.key.keysym.sym) {
-                        case SDLK_c:
+                        case SDLK_SPACE:
                             memset(canvas, 0, sizeof(canvas));
                             break;
                         case SDLK_g:
                             grid = !grid;
                             break;
-                        case SDLK_q: {
-                            float input[H * W * 2];
+                        case SDLK_RETURN: {
+                            float input[H * W];
                             uint8_t* c = &canvas[0][0];
                             for (int i = 0; i < sizeof(canvas); ++i) {
                                 input[i] = static_cast<float>(c[i]) / 255.0f;
                             }
 
-                            neural::process_image(input, input + H * W, H, W);
+                            float buffer[H * W];
+                            neural::process_image(input, buffer, H, W);
 
-                            float output[10];
-                            network.compute(input, output);
+                            float digits[10];
+                            network.compute(input, digits);
 
-                            int digit = neural::Network::argmax(output, 10);
+                            int digit = neural::Network::argmax(digits, 10);
                             std::cout << digit << std::endl;
                             break;
                         }

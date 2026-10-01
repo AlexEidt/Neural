@@ -2,8 +2,8 @@
 
 Fully connected feedforward neural network trained with stochastic gradient descent on the MNIST database.
 
-* `Q` to guess the digit,
-* `C` to clear the screen.
+* `ENTER` to guess the digit,
+* `SPACE` to clear the screen.
 * `G` to toggle the grid.
 * Left click to draw.
 * right click to erase.

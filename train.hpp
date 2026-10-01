@@ -8,7 +8,7 @@ namespace neural
     // Train network on mnist dataset. Assumes 784 input, 10 output.
     bool train(neural::Network& network, const char* data, const char* labels, float rate);
 
-    void process_image(float* image, float* temp, int rows, int cols);
+    void process_image(float* image, float* temp, int w, int h);
 } // namespace neural
 
 #endif // NEURAL_TRAIN_HPP

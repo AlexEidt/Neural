@@ -66,7 +66,7 @@ namespace neural
                 fimage[j] = static_cast<float>(image[j]) / 255.0f;
             }
 
-            process_image(fimage, fimage + rows * cols, rows, cols);
+            process_image(fimage, fimage + rows * cols, cols, rows);
 
             network.compute(fimage, nullptr);
 
@@ -89,66 +89,68 @@ namespace neural
     }
 
     // Pixel value, or 0 outside the image.
-    static float pixel(float* image, int rows, int cols, int x, int y) {
-        if (x < 0 || y < 0 || x >= cols || y >= rows)
+    static float pixel(float* image, int w, int h, int x, int y) {
+        if (x < 0 || y < 0 || x >= w || y >= h)
             return 0.0f;
 
-        return image[y * cols + x];
+        return image[y * w + x];
     }
 
-    void process_image(float* image, float* temp, int rows, int cols) {
-        // Bounding box of the digit.
-        int left = cols, right = -1, top = rows, bottom = -1;
-        for (int y = 0; y < rows; ++y) {
-            for (int x = 0; x < cols; ++x) {
-                if (image[y * cols + x] > 0.0f) {
-                    left = std::min(left, x);
-                    right = std::max(right, x);
-                    top = std::min(top, y);
-                    bottom = std::max(bottom, y);
-                }
-            }
-        }
+    // Bilinear interpolation of the four pixels around (x, y).
+    static float sample(float* image, int w, int h, float x, float y) {
+        int left = static_cast<int>(std::floor(x));
+        int top = static_cast<int>(std::floor(y));
+        float tx = x - left;
+        float ty = y - top;
 
-        if (right < 0)
-            return;
+        float top_left = pixel(image, w, h, left, top);
+        float top_right = pixel(image, w, h, left + 1, top);
+        float bottom_left = pixel(image, w, h, left, top + 1);
+        float bottom_right = pixel(image, w, h, left + 1, top + 1);
 
-        // Resize the box so its longer side is BOX pixels, into the top left of temp.
-        float scale = static_cast<float>(std::max(right - left + 1, bottom - top + 1)) / BOX;
-        float mass = 0.0f, mass_x = 0.0f, mass_y = 0.0f;
-        for (int i = 0; i < rows * cols; ++i) {
-            temp[i] = 0.0f;
-        }
+        float upper = top_left + tx * (top_right - top_left);
+        float lower = bottom_left + tx * (bottom_right - bottom_left);
 
-        for (int y = 0; y < BOX; ++y) {
-            for (int x = 0; x < BOX; ++x) {
-                // Bilinear sample of the source at this pixel's center.
-                float sx = left + (x + 0.5f) * scale - 0.5f;
-                float sy = top + (y + 0.5f) * scale - 0.5f;
-                int x0 = static_cast<int>(std::floor(sx));
-                int y0 = static_cast<int>(std::floor(sy));
-                float tx = sx - x0;
-                float ty = sy - y0;
+        return upper + ty * (lower - upper);
+    }
 
-                float value = (1.0f - ty) * ((1.0f - tx) * pixel(image, rows, cols, x0, y0) + tx * pixel(image, rows, cols, x0 + 1, y0)) +
-                              ty * ((1.0f - tx) * pixel(image, rows, cols, x0, y0 + 1) + tx * pixel(image, rows, cols, x0 + 1, y0 + 1));
+    void process_image(float* image, float* temp, int w, int h) {
+        // Copy into temp while finding the bounding box and center of mass.
+        int left = w, right = -1, top = h, bottom = -1;
+        float mass = 0.0f, center_x = 0.0f, center_y = 0.0f;
+        for (int y = 0; y < h; ++y) {
+            for (int x = 0; x < w; ++x) {
+                float value = image[y * w + x];
+                temp[y * w + x] = value;
+                if (value <= 0.0f)
+                    continue;
 
-                temp[y * cols + x] = value;
+                left = std::min(left, x);
+                right = std::max(right, x);
+                top = std::min(top, y);
+                bottom = std::max(bottom, y);
+
                 mass += value;
-                mass_x += value * x;
-                mass_y += value * y;
+                center_x += value * x;
+                center_y += value * y;
             }
         }
 
         if (mass <= 0.0f)
             return;
 
-        // Move it so its center of mass is in the middle of the image.
-        int shift_x = static_cast<int>(std::lround(cols / 2.0f - mass_x / mass));
-        int shift_y = static_cast<int>(std::lround(rows / 2.0f - mass_y / mass));
-        for (int y = 0; y < rows; ++y) {
-            for (int x = 0; x < cols; ++x) {
-                image[y * cols + x] = pixel(temp, rows, cols, x - shift_x, y - shift_y);
+        center_x /= mass;
+        center_y /= mass;
+
+        // Drawing pixels per output pixel, so the longer side of the box becomes BOX.
+        float scale = static_cast<float>(std::max(right - left, bottom - top) + 1) / BOX;
+
+        // Resample around the center of mass so it lands in the middle of the image.
+        for (int y = 0; y < h; ++y) {
+            for (int x = 0; x < w; ++x) {
+                float source_x = center_x + (x - w / 2.0f) * scale;
+                float source_y = center_y + (y - h / 2.0f) * scale;
+                image[y * w + x] = sample(temp, w, h, source_x, source_y);
             }
         }
     }

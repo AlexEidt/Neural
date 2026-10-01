@@ -13,14 +13,17 @@ namespace neural {
             void compute(float* input, float* output);
             void backpropagate(float* expected, float rate);
 
+            // Dump/restore the layer layout and the weights array, which holds everything the network learned.
+            bool save(const char* path);
+            bool load(const char* path);
+
             static int argmax(float* arr, int size);
 
         private:
             struct Layer; // Forward declaration.
 
             struct Neuron {
-                float* weights {nullptr};
-                float bias {0.0f};
+                float* weights {nullptr}; // One per previous neuron, bias last.
 
                 float value;
                 float error;
